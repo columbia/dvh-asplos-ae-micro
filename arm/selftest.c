@@ -17,6 +17,28 @@
 #include <asm/smp.h>
 #include <asm/cpumask.h>
 #include <asm/barrier.h>
+#include <asm/io.h>
+
+#define ARM_MICRO_TEST 1
+
+static bool count_cycles = true;
+static void *mmio_read_user_addr = (void*) 0x0a000008;
+static void *vgic_dist_addr = (void*) 0x08000000;
+static void *vgic_cpu_addr = (void*) 0x08010000;
+static const int sgi_irq = 1;
+
+#define GICC_EOIR               0x00000010
+#define GOAL (1ULL << 28)
+
+#define ARR_SIZE(_x) ((int)(sizeof(_x) / sizeof(_x[0])))
+#define for_each_test(_iter, _tests, _tmp) \
+	for (_tmp = 0, _iter = _tests; \
+			_tmp < ARR_SIZE(_tests); \
+			_tmp++, _iter++)
+
+#define CYCLE_COUNT(c1, c2) \
+	(((c1) > (c2) || ((c1) == (c2) && count_cycles)) ? 0 : (c2) - (c1))
+
 
 static void check_setup(int argc, char **argv)
 {
@@ -319,9 +341,143 @@ static void cpu_report(void)
 	halt();
 }
 
+#if ARM_MICRO_TEST == 1
+static uint64_t read_cc(void)
+{
+	uint64_t cc;
+	if (!count_cycles)
+		return 0;
+	asm volatile(
+		"isb\n"
+		"mrs %0, PMCCNTR_EL0\n"
+		"isb\n"
+		: [reg] "=r" (cc)
+		::
+	);
+	return cc;
+}
+
+static unsigned long hvc_test(void)
+{
+	unsigned long c1, c2;
+
+	c1 = read_cc();
+	asm volatile("mov w0, #0x4b000000; hvc #0");
+	c2 = read_cc();
+	return CYCLE_COUNT(c1, c2);
+}
+
+static void __noop(void)
+{
+}
+
+static unsigned long noop_guest(void)
+{
+	unsigned long c1, c2;
+
+	c1 = read_cc();
+	__noop();
+	c2 = read_cc();
+	return CYCLE_COUNT(c1, c2);
+}
+
+static unsigned long mmio_read_user(void)
+{
+	unsigned long c1, c2;
+
+	c1 = read_cc();
+	readl(mmio_read_user_addr);
+	c2 = read_cc();
+	return CYCLE_COUNT(c1, c2);
+}
+
+static unsigned long mmio_read_vgic(void)
+{
+	unsigned long c1, c2;
+
+	c1 = read_cc();
+	readl(vgic_dist_addr + 0x8);
+	c2 = read_cc();
+	return CYCLE_COUNT(c1, c2);
+}
+
+static unsigned long eoi_test(void)
+{
+	unsigned long c1, c2;
+
+	unsigned long val = 1023; /* spurious IDs, writes to EOI are ignored */
+	c1 = read_cc();
+	writel(val, vgic_cpu_addr + GICC_EOIR);
+	c2 = read_cc();
+	return CYCLE_COUNT(c1, c2);
+}
+
+struct exit_test {
+	char *name;
+	unsigned long (*test_fn)(void);
+	bool run;
+};
+
+static struct exit_test available_tests[] = {
+	{"hvc",                hvc_test,           true},
+	{"noop_guest",         noop_guest,         true},
+	{"mmio_read_user",     mmio_read_user,     true},
+	{"mmio_read_vgic",     mmio_read_vgic,     true},
+	//{ "ipi",                ipi_test,           false },
+	{"eoi",                eoi_test,           true},
+};
+
+static void loop_test(struct exit_test *test)
+{
+	unsigned long i, iterations = 32;
+	unsigned long sample, cycles;
+	unsigned long long min = 0, max = 0;
+	do {
+		iterations *= 2;
+		cycles = 0;
+		for (i = 0; i < iterations; i++) {
+			sample = test->test_fn();
+			if (sample == 0 && count_cycles) {
+				/* If something went wrong or we had an
+				 * overflow, don't count that sample */
+				iterations--;
+				i--;
+				//debug("cycle count overflow: %d\n", sample);
+				continue;
+			}
+			cycles += sample;
+			if (min == 0 || min > sample)
+				min = sample;
+			if (max < sample)
+				max = sample;
+		}
+	} while (cycles < GOAL && count_cycles);
+	printf("%s:\t avg %lu\t min %llu\t max %llu\n",
+		test->name, cycles / iterations, min, max);
+}
+
+void kvm_unit_test(void)
+{
+	int i=0;
+	struct exit_test *test;
+	for_each_test(test, available_tests, i) {
+		if (!test->run)
+			continue;
+		loop_test(test);
+	}
+
+	return;
+}
+#endif
+
 int main(int argc, char **argv)
 {
 	report_prefix_push("selftest");
+
+#if ARM_MICRO_TEST == 1
+	kvm_unit_test();
+	return 0;
+#endif
 
 	if (argc < 2)
 		report_abort("no test specified");
