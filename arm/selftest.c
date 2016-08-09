@@ -21,13 +21,50 @@
 
 #define ARM_MICRO_TEST 1
 
+#if ARM_MICRO_TEST == 1
+#define FAIL 1
+
 static bool count_cycles = true;
+static const int sgi_irq = 1;
 static void *mmio_read_user_addr = (void*) 0x0a000008;
 static void *vgic_dist_addr = (void*) 0x08000000;
 static void *vgic_cpu_addr = (void*) 0x08010000;
-static const int sgi_irq = 1;
+static volatile bool second_cpu_up = false;
+static volatile bool first_cpu_ack;
+static volatile bool ipi_acked;
+static volatile bool ipi_received;
+static volatile bool ipi_ready;
 
-#define GICC_EOIR               0x00000010
+/* Some ARM GIC defines: */
+#define GICC_CTLR		0x00000000
+#define GICC_PMR		0x00000004
+#define GICC_IAR		0x0000000c
+#define GICC_EOIR		0x00000010
+
+#define GICD_CTLR		0x00000000
+#define GICD_ISENABLE(_n)	(0x00000100 + ((_n / 32) * 4))
+#define GICD_SGIR		0x00000f00
+#define GICD_SPENDSGI		0x00000f20
+
+#define MK_EOIR(_cpuid, _irqid)	((((_cpuid) & 0x7) << 10) | ((_irqid) & 0x3ff))
+
+#define ISENABLE_IRQ(_irq)	(1UL << (_irq % 32))
+
+#define SGI_SET_PENDING(_target_cpu, _source_cpu) \
+	((1UL << _target_cpu) << (8 * _source_cpu))
+
+#define SGIR_IRQ_MASK			((1UL << 4) - 1)
+#define SGIR_NSATTR			(1UL << 15)
+#define SGIR_CPU_TARGET_LIST_SHIFT	(16)
+
+#define SGIR_FORMAT(_target_cpu, _irq_num) ( \
+	((1UL << _target_cpu) << SGIR_CPU_TARGET_LIST_SHIFT) | \
+	((_irq_num) & SGIR_IRQ_MASK) | \
+	SGIR_NSATTR)
+
+#define IAR_CPUID(_iar)		((_iar >> 10) & 0x7)
+#define IAR_IRQID(_iar)		((_iar >> 0) & 0x3ff)
+
 #define GOAL (1ULL << 28)
 
 #define ARR_SIZE(_x) ((int)(sizeof(_x) / sizeof(_x[0])))
@@ -39,6 +76,7 @@ static const int sgi_irq = 1;
 #define CYCLE_COUNT(c1, c2) \
 	(((c1) > (c2) || ((c1) == (c2) && count_cycles)) ? 0 : (c2) - (c1))
 
+#endif
 
 static void check_setup(int argc, char **argv)
 {
@@ -357,6 +395,120 @@ static uint64_t read_cc(void)
 	return cc;
 }
 
+#define ipi_debug(fmt, ...) \
+	printf("ipi_test [cpu %d]: " fmt, smp_processor_id(),  ## __VA_ARGS__)
+static void ipi_irq_handler(struct pt_regs *regs __unused)
+{
+	unsigned long ack;
+	ipi_ready = false;
+	ipi_received = true;
+	ack = readl(vgic_cpu_addr + GICC_IAR);
+	ipi_acked = true;
+	writel(ack, vgic_cpu_addr + GICC_EOIR);
+	ipi_ready = true;
+}
+
+static inline void enable_interrupts(void)
+{
+	asm volatile("msr daifclr, #2");
+	isb();
+}
+
+static void ipi_test_secondary_entry(void)
+{
+	unsigned int timeout = 1U << 28;
+
+	ipi_debug("secondary core up\n");
+
+	enum vector v = EL1H_IRQ;
+	install_irq_handler(v, ipi_irq_handler);
+
+	writel(0x1, vgic_cpu_addr + GICC_CTLR); /* enable cpu interface */
+	writel(0xff, vgic_cpu_addr + GICC_PMR);	/* unmask all irq priorities */
+
+	second_cpu_up = true;
+
+	ipi_debug("secondary initialized vgic\n");
+
+	while (!first_cpu_ack && timeout--);
+	if (!first_cpu_ack) {
+		printf("ipi_test: First CPU did not ack wake-up\n");
+	}
+
+	ipi_debug("detected first cpu ack\n");
+
+	/* Enter small wait-loop */
+	enable_interrupts();
+	ipi_ready = true;
+	while (true);
+}
+
+static int ipi_test_init(void)
+{
+	int ret;
+	unsigned int timeout = 1U << 28;
+
+	ipi_ready = false;
+
+	/* Enable distributor and SGI used for ipi test */
+	writel(0x1, vgic_dist_addr + GICD_CTLR); /* enable distributor */
+	writel(ISENABLE_IRQ(sgi_irq), vgic_dist_addr + GICD_ISENABLE(sgi_irq));
+
+	ipi_debug("starting second CPU\n");
+	smp_boot_secondary(1, ipi_test_secondary_entry);
+	/*ret = smp_boot_secondary(1, ipi_test_secondary_entry);
+	if (ret) {
+		ipi_debug("second CPU failed to start\n");
+		goto out;
+	}*/
+
+	/* Wait for second CPU! */
+	while (!second_cpu_up && timeout--);
+
+	if (!second_cpu_up) {
+		printf("ipi_test: timeout waiting for secondary CPU\n");
+		return FAIL;
+	}
+
+	ipi_debug("detected secondary core up\n");
+
+	first_cpu_ack = true;
+
+//out:
+	return ret;
+}
+
+static unsigned long ipi_test(void)
+{
+	unsigned long val;
+	unsigned int timeout = 1U << 28;
+	unsigned long c1, c2;
+
+	while (!ipi_ready && timeout--);
+	if (!ipi_ready) {
+		ipi_debug("ipi_test: second core not ready for IPIs\n");
+		exit(FAIL);
+	}
+
+	ipi_received = false;
+
+	c1 = read_cc();
+
+	/* Signal IPI/SGI IRQ to CPU 1 */
+	val = SGIR_FORMAT(1, sgi_irq);
+	writel(val, vgic_dist_addr + GICD_SGIR);
+
+	timeout = 1U << 28;
+	while (!ipi_received && timeout--);
+	if (!ipi_received) {
+		ipi_debug("ipi_test: secondary core never received ipi\n");
+		exit(FAIL);
+	}
+
+	c2 = read_cc();
+	return CYCLE_COUNT(c1, c2);
+}
+
 static unsigned long hvc_test(void)
 {
 	unsigned long c1, c2;
@@ -423,8 +575,8 @@ static struct exit_test available_tests[] = {
 	{"noop_guest",         noop_guest,         true},
 	{"mmio_read_user",     mmio_read_user,     true},
 	{"mmio_read_vgic",     mmio_read_vgic,     true},
-	//{ "ipi",                ipi_test,           false },
 	{"eoi",                eoi_test,           true},
+	{"ipi",                ipi_test,           true},
 };
 
 static void loop_test(struct exit_test *test)
@@ -475,6 +627,7 @@ int main(int argc, char **argv)
 	report_prefix_push("selftest");
 
 #if ARM_MICRO_TEST == 1
+	ipi_test_init();
 	kvm_unit_test();
 	return 0;
 #endif
