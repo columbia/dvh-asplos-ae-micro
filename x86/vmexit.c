@@ -286,8 +286,8 @@ static struct test tests[] = {
 	{ ple_round_robin, "ple-round-robin", .parallel = 1 },
 	{ wr_tsc_adjust_msr, "wr_tsc_adjust_msr", .parallel = 1 },
 	{ rd_tsc_adjust_msr, "rd_tsc_adjust_msr", .parallel = 1 },
-	{ NULL, "pci-mem", .parallel = 0, .next = pci_mem_next },
-	{ NULL, "pci-io", .parallel = 0, .next = pci_io_next },
+	//{ NULL, "pci-mem", .parallel = 0, .next = pci_mem_next },
+	//{ NULL, "pci-io", .parallel = 0, .next = pci_io_next },
 };
 
 unsigned iterations;
@@ -305,6 +305,48 @@ static void run_test(void *_func)
 }
 
 static bool do_test(struct test *test)
+{
+	unsigned long i, iterations = 32;
+	unsigned long sample, cycles;
+	unsigned long t1, t2;
+	unsigned long long min = 0, max = 0;
+
+	if (cpu_count() == 1 && !test->parallel) {
+		printf("%s requires smp, skip it..\n", test->name);
+		goto out;
+	}
+
+	do {
+		iterations *= 2;
+		cycles = 0;
+		for (i = 0; i < iterations; i++) {
+			t1 = rdtsc();
+			test->func();
+			t2 = rdtsc();
+			sample = t2 - t1;
+			if (sample == 0) {
+				/* If something went wrong or we had an
+				 * overflow, don't count that sample */
+				iterations--;
+				i--;
+				//debug("cycle count overflow: %d\n", sample);
+				continue;
+			}
+			cycles += sample;
+			if (min == 0 || min > sample)
+				min = sample;
+			if (max < sample)
+				max = sample;
+		}
+	} while (cycles < GOAL);
+	printf("%s:\t avg %lu\t min %llu\t max %llu\n",
+		test->name, cycles / iterations, min, max);
+
+out:
+	return test->next;
+}
+
+/*static bool do_test(struct test *test)
 {
 	int i;
 	unsigned long long t1, t2;
@@ -345,7 +387,7 @@ static bool do_test(struct test *test)
 	} while ((t2 - t1) < GOAL);
 	printf("%s %d\n", test->name, (int)((t2 - t1) / iterations));
 	return test->next;
-}
+}*/
 
 static void enable_nx(void *junk)
 {
