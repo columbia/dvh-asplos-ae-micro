@@ -69,6 +69,7 @@ chr_testdev+=' -device virtconsole,chardev=ctd -chardev testdev,id=ctd'
 
 M+=",accel=$ACCEL"
 command="$qemu $M -cpu $processor $chr_testdev"
+command+=" -qmp unix:/var/run/qmp,server,wait"
 command+=" -display none -serial stdio -smp 2 -kernel"
 command="$(timeout_cmd) $command"
 echo $command "$@"
