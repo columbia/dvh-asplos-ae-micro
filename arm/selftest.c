@@ -553,6 +553,16 @@ static unsigned long mmio_read_vgic(void)
 	return CYCLE_COUNT(c1, c2);
 }
 
+static unsigned long mmio_vgic_fast(void)
+{
+	unsigned long c1, c2;
+
+	c1 = read_cc();
+	writel(1, vgic_dist_addr + 0x110);
+	c2 = read_cc();
+	return CYCLE_COUNT(c1, c2);
+}
+
 static unsigned long eoi_test(void)
 {
 	unsigned long c1, c2;
@@ -575,6 +585,7 @@ static struct exit_test available_tests[] = {
 	{"noop_guest",         noop_guest,         true},
 	{"mmio_read_user",     mmio_read_user,     true},
 	{"mmio_read_vgic",     mmio_read_vgic,     true},
+	{"mmio_vgic_fast",     mmio_vgic_fast,     true},
 	{"eoi",                eoi_test,           true},
 	{"ipi",                ipi_test,           true},
 };
