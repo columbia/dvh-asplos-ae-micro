@@ -574,6 +574,53 @@ static unsigned long eoi_test(void)
 	return CYCLE_COUNT(c1, c2);
 }
 
+static unsigned long trap_test(void)
+{
+	unsigned long cc0 = 0, cc1 = 0, cc2 = 0;
+
+	asm volatile(
+			"mov x0, #0x10000\n\t"
+			"isb\n\t"
+			"mrs x3 , PMCCNTR_EL0\n\t"
+			"isb\n\t"
+			"hvc #0\n\t"
+			"isb\n\t"
+			"mrs x2 , PMCCNTR_EL0\n\t"
+			"isb\n\t"
+			"mov %[cc0], x3\n\t"
+			"mov %[cc1], x1\n\t"
+			"mov %[cc2], x2\n\t":
+			[cc0] "=r" (cc0),
+			[cc1] "=r" (cc1),
+			[cc2] "=r" (cc2): :
+			"x0", "x1", "x2", "x3");
+	return CYCLE_COUNT(cc0, cc2);
+}
+
+static unsigned long trap_tvm_test(void)
+{
+	unsigned long cc0 = 0, cc1 = 0, cc2 = 0;
+
+	asm volatile(
+			"mrs x4, sctlr_el1\n\t"
+			"mov x0, #0x80000\n\t"
+			"isb\n\t"
+			"mrs x3 , PMCCNTR_EL0\n\t"
+			"isb\n\t"
+			"msr sctlr_el1, x4\n\t"
+			"isb\n\t"
+			"mrs x2 , PMCCNTR_EL0\n\t"
+			"isb\n\t"
+			"mov %[cc0], x3\n\t"
+			"mov %[cc1], x1\n\t"
+			"mov %[cc2], x2\n\t":
+			[cc0] "=r" (cc0),
+			[cc1] "=r" (cc1),
+			[cc2] "=r" (cc2): :
+			"x0", "x1", "x2", "x3", "x4");
+	return CYCLE_COUNT(cc0, cc2);
+}
+
 struct exit_test {
 	char *name;
 	unsigned long (*test_fn)(void);
@@ -588,6 +635,8 @@ static struct exit_test available_tests[] = {
 	{"mmio_vgic_fast",     mmio_vgic_fast,     true},
 	{"eoi",                eoi_test,           true},
 	{"ipi",                ipi_test,           true},
+	{"trap",               trap_test,          false},
+	{"trap_tvm",           trap_tvm_test,      false},
 };
 
 static void loop_test(struct exit_test *test)
