@@ -333,9 +333,13 @@ static bool do_test(struct test *test)
 		iterations *= 2;
 		cycles = 0;
 		for (i = 0; i < iterations; i++) {
+			if (test->pre_test)
+				test->pre_test();
 			t1 = rdtsc();
 			test->func();
 			t2 = rdtsc();
+			if (test->post_test)
+				test->post_test();
 			sample = t2 - t1;
 			if (sample == 0) {
 				/* If something went wrong or we had an
