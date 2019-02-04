@@ -13,6 +13,8 @@ struct test {
 	int (*valid)(void);
 	int parallel;
 	bool (*next)(struct test *);
+	void (*pre_test)(void);
+	void (*post_test)(void);
 };
 
 #define GOAL (1ull << 30)
@@ -64,6 +66,16 @@ static void nop(void *junk)
 static void ipi(void)
 {
 	on_cpu(1, nop, 0);
+}
+
+static void ipi_nowait_post_test(void)
+{
+	on_cpu_completion_wait(1);
+}
+
+static void ipi_nowait(void)
+{
+	on_cpu_sync_nowait_receive(1, nop, 0);
 }
 
 static void ipi_halt(void)
@@ -282,6 +294,7 @@ static struct test tests[] = {
 //	{ outl_elcr_kernel, "outl_to_kernel", .parallel = 1 },
 //	{ mov_dr, "mov_dr", .parallel = 1 },
 	{ ipi, "ipi", is_smp, .parallel = 0, },
+	{ ipi_nowait, "ipi-nowait", is_smp, .parallel = 0, .post_test = ipi_nowait_post_test },
 //	{ ipi_halt, "ipi+halt", is_smp, .parallel = 0, },
 //	{ ple_round_robin, "ple-round-robin", .parallel = 1 },
 //	{ wr_tsc_adjust_msr, "wr_tsc_adjust_msr", .parallel = 1 },
