@@ -12,3 +12,8 @@ echo "ipi avg"
 grep ipi: result | awk '{ print $3 }'
 echo "ipi min"
 grep ipi: result | awk '{ print $5 }'
+
+echo "ipi-nowait avg"
+grep ipi-nowait: result | awk '{ print $3 }'
+echo "ipi-nowait min"
+grep ipi-nowait: result | awk '{ print $5 }'
