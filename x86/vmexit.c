@@ -102,6 +102,31 @@ static void nop(void *junk)
 {
 }
 
+bool inf_run;
+static void inf(void *junk)
+{
+	int a = smp_id();
+	int b;
+	static int cnt = 0;
+	printf("cpu %d goes to run\n", smp_id());
+
+	inf_run = true;
+
+	irq_enable();
+	while (inf_run)
+		;
+}
+
+static void ipi_pre_test(void)
+{
+	on_cpu_async(1, inf, 0);
+}
+
+static void ipi_post_test(void)
+{
+	inf_run = false;
+}
+
 static void ipi(void)
 {
 	on_cpu(1, nop, 0);
@@ -334,6 +359,8 @@ static struct test tests[] = {
 //	{ mov_dr, "mov_dr", .parallel = 1 },
 	{ ipi, "ipi", is_smp, .parallel = 0, },
 	{ ipi_nowait, "ipi-nowait", is_smp, .parallel = 0, .post_test = ipi_nowait_post_test },
+	{ ipi, "ipi-dest-running", is_smp, .parallel = 0,
+	  .post_test = ipi_post_test, .pre_test =  ipi_pre_test },
 //	{ ipi_halt, "ipi+halt", is_smp, .parallel = 0, },
 //	{ ple_round_robin, "ple-round-robin", .parallel = 1 },
 //	{ wr_tsc_adjust_msr, "wr_tsc_adjust_msr", .parallel = 1 },
