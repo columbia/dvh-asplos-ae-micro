@@ -368,17 +368,15 @@ static bool do_test(struct test *test)
 		goto out;
 	}
 
+	if (test->pre_test)
+		test->pre_test();
 	do {
 		iterations *= 2;
 		cycles = 0;
 		for (i = 0; i < iterations; i++) {
-			if (test->pre_test)
-				test->pre_test();
 			t1 = rdtsc();
 			test->func();
 			t2 = rdtsc();
-			if (test->post_test)
-				test->post_test();
 			sample = t2 - t1;
 			if (sample == 0) {
 				/* If something went wrong or we had an
@@ -395,6 +393,9 @@ static bool do_test(struct test *test)
 				max = sample;
 		}
 	} while (cycles < GOAL);
+
+	if (test->post_test)
+		test->post_test();
 	printf("%s:\t avg %lu\t min %llu\t max %llu\n",
 		test->name, cycles / iterations, min, max);
 
