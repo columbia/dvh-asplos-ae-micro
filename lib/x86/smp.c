@@ -97,7 +97,7 @@ static void __on_cpu(int cpu, void (*function)(void *data), void *data,
 	apic_icr_write(APIC_INT_ASSERT | APIC_DEST_PHYSICAL | APIC_DM_FIXED
                        | IPI_VECTOR,
                        cpu);
-	if ((ipi_wait & IPI_SENDER_MASK) == IPI_SENDER_WAIT) {
+	if ((wait & IPI_SENDER_MASK) == IPI_SENDER_WAIT) {
 	    while (!ipi_done)
 		;
 	}
