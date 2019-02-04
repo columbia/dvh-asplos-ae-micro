@@ -77,6 +77,12 @@ static void setup_smp_id(void *data)
     asm ("mov %0, %%gs:0" : : "r"(apic_id()) : "memory");
 }
 
+#define IPI_RECEIVER_MASK	0x1
+#define IPI_RECEIVER_WAIT	0x0
+#define IPI_RECEIVER_NO_WAIT	0x1
+#define IPI_SENDER_MASK		0x2
+#define IPI_SENDER_WAIT		0x0
+#define IPI_SENDER_NO_WAIT	0x2
 static void __on_cpu(int cpu, void (*function)(void *data), void *data,
                      int wait)
 {
@@ -87,12 +93,14 @@ static void __on_cpu(int cpu, void (*function)(void *data), void *data,
 	ipi_done = 0;
 	ipi_function = function;
 	ipi_data = data;
-	ipi_wait = wait;
+	ipi_wait = wait & IPI_RECEIVER_MASK;
 	apic_icr_write(APIC_INT_ASSERT | APIC_DEST_PHYSICAL | APIC_DM_FIXED
                        | IPI_VECTOR,
                        cpu);
-	while (!ipi_done)
-	    ;
+	if ((ipi_wait & IPI_SENDER_MASK) == IPI_SENDER_WAIT) {
+	    while (!ipi_done)
+		;
+	}
     }
     spin_unlock(&ipi_lock);
 }
@@ -107,6 +115,11 @@ void on_cpu_async(int cpu, void (*function)(void *data), void *data)
     __on_cpu(cpu, function, data, 0);
 }
 
+void on_cpu_sync_nowait_receive(int cpu, void (*function)(void *data), void *data)
+{
+    /* sync + sender no-wait */
+    __on_cpu(cpu, function, data, 3);
+}
 
 void smp_init(void)
 {
