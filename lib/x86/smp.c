@@ -115,6 +115,19 @@ void on_cpu_async(int cpu, void (*function)(void *data), void *data)
     __on_cpu(cpu, function, data, 0);
 }
 
+void on_cpu_completion_wait(int cpu)
+{
+    spin_lock(&ipi_lock);
+    if (cpu == smp_id()) {
+	    printf("Shouldn't be waiting for completion for itself\n");
+    }
+    else {
+	while (!ipi_done)
+	    ;
+    }
+    spin_unlock(&ipi_lock);
+}
+
 void on_cpu_sync_nowait_receive(int cpu, void (*function)(void *data), void *data)
 {
     /* sync + sender no-wait */
