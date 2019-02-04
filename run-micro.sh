@@ -1,9 +1,12 @@
 #!/bin/bash
 rm -f result
-./x86-run x86/vmexit.flat | tee result
-for i in `seq 1 9`;
+APPEND=''
+for i in `seq 0 9`;
 do
-	./x86-run x86/vmexit.flat | tee -a result
+	if [ i != 0 ]; then
+		APPEND="-a"
+	fi
+	./x86-run x86/vmexit.flat | tee $APPEND result
 done
 echo "ipi avg"
 grep ipi: result | awk '{ print $3 }'
