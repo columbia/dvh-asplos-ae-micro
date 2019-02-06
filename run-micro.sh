@@ -32,3 +32,9 @@ echo "ipi-nowait avg"
 grep ipi-nowait: result | awk '{ print $3 }'
 echo "ipi-nowait min"
 grep ipi-nowait: result | awk '{ print $5 }'
+
+TEST=ipi-dest
+echo "$TEST avg"
+grep $TEST result | awk '{ print $3 }'
+echo "$TEST min"
+grep $TEST result | awk '{ print $5 }'
