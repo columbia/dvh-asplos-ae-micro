@@ -392,7 +392,7 @@ static void delay(int count)
 
 static bool do_test(struct test *test)
 {
-	unsigned long i, iterations = 32;
+	unsigned long i, iterations;
 	unsigned long sample, cycles;
 	unsigned long t1, t2;
 	unsigned long long min = 0, max = 0;
@@ -404,34 +404,34 @@ static bool do_test(struct test *test)
 
 	if (test->pre_test)
 		test->pre_test();
-	do {
-		iterations *= 2;
-		cycles = 0;
-		for (i = 0; i < iterations; i++) {
-			t1 = start();
-			test->func();
-			t2 = stop();
-			/* Wait some cycles until the dest is completely done for IPI */
-			delay(TEST_DELAY);
-			sample = t2 - t1;
-			if (sample == 0) {
-				/* If something went wrong or we had an
-				 * overflow, don't count that sample */
-				iterations--;
-				i--;
-				//debug("cycle count overflow: %d\n", sample);
-				continue;
-			}
-			cycles += sample;
-			if (min == 0 || min > sample)
-				min = sample;
-			if (max < sample)
-				max = sample;
+
+	iterations = 100000;
+	cycles = 0;
+	for (i = 0; i < iterations; i++) {
+		t1 = start();
+		test->func();
+		t2 = stop();
+		/* Wait some cycles until the dest is completely done for IPI */
+		delay(TEST_DELAY);
+		sample = t2 - t1;
+		if (sample == 0) {
+			/* If something went wrong or we had an
+			 * overflow, don't count that sample */
+			iterations--;
+			i--;
+			//debug("cycle count overflow: %d\n", sample);
+			continue;
 		}
-	} while (cycles < GOAL);
+		cycles += sample;
+		if (min == 0 || min > sample)
+			min = sample;
+		if (max < sample)
+			max = sample;
+	}
 
 	if (test->post_test)
 		test->post_test();
+
 	printf("%s:\t avg %lu\t min %llu\t max %llu\n",
 		test->name, cycles / iterations, min, max);
 
