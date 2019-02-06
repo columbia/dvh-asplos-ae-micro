@@ -408,9 +408,9 @@ static bool do_test(struct test *test)
 		iterations *= 2;
 		cycles = 0;
 		for (i = 0; i < iterations; i++) {
-			t1 = rdtsc();
+			t1 = start();
 			test->func();
-			t2 = rdtsc();
+			t2 = stop();
 			/* Wait some cycles until the dest is completely done for IPI */
 			delay(TEST_DELAY);
 			sample = t2 - t1;
