@@ -346,6 +346,7 @@ static bool pci_io_next(struct test *test)
 	return ret;
 }
 
+#define THRESHOLD 100000
 static struct test tests[] = {
 //	{ cpuid_test, "cpuid", .parallel = 1,  },
 	{ vmcall, "vmcall", .parallel = 1, },
@@ -358,10 +359,11 @@ static struct test tests[] = {
 //	{ inl_nop_kernel, "inl_from_kernel", .parallel = 1 },
 //	{ outl_elcr_kernel, "outl_to_kernel", .parallel = 1 },
 //	{ mov_dr, "mov_dr", .parallel = 1 },
-	{ ipi, "ipi", is_smp, .parallel = 0, },
-	{ ipi_nowait, "ipi-nowait", is_smp, .parallel = 0, .post_test = ipi_nowait_post_test },
+	{ ipi, "ipi", is_smp, .parallel = 0,  .threshold = THRESHOLD },
+	{ ipi_nowait, "ipi-nowait", is_smp, .parallel = 0, .post_test = ipi_nowait_post_test,
+ 	.threshold = THRESHOLD},
 	{ ipi, "ipi-dest-running", is_smp, .parallel = 0,
-	  .post_test = ipi_post_test, .pre_test =  ipi_pre_test, .threshold = 100000 },
+	  .post_test = ipi_post_test, .pre_test =  ipi_pre_test, .threshold = THRESHOLD },
 //	{ ipi_halt, "ipi+halt", is_smp, .parallel = 0, },
 //	{ ple_round_robin, "ple-round-robin", .parallel = 1 },
 //	{ wr_tsc_adjust_msr, "wr_tsc_adjust_msr", .parallel = 1 },
