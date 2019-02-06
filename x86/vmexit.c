@@ -383,6 +383,13 @@ static void run_test(void *_func)
     atomic_inc(&nr_cpus_done);
 }
 
+#define TEST_DELAY 10000
+
+static void delay(int count)
+{
+	while(count--) asm("");
+}
+
 static bool do_test(struct test *test)
 {
 	unsigned long i, iterations = 32;
@@ -404,6 +411,8 @@ static bool do_test(struct test *test)
 			t1 = rdtsc();
 			test->func();
 			t2 = rdtsc();
+			/* Wait some cycles until the dest is completely done for IPI */
+			delay(TEST_DELAY);
 			sample = t2 - t1;
 			if (sample == 0) {
 				/* If something went wrong or we had an
