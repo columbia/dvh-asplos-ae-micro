@@ -15,6 +15,7 @@ struct test {
 	bool (*next)(struct test *);
 	void (*pre_test)(void);
 	void (*post_test)(void);
+	int threshold;
 };
 
 #define GOAL (1ull << 30)
@@ -360,7 +361,7 @@ static struct test tests[] = {
 	{ ipi, "ipi", is_smp, .parallel = 0, },
 	{ ipi_nowait, "ipi-nowait", is_smp, .parallel = 0, .post_test = ipi_nowait_post_test },
 	{ ipi, "ipi-dest-running", is_smp, .parallel = 0,
-	  .post_test = ipi_post_test, .pre_test =  ipi_pre_test },
+	  .post_test = ipi_post_test, .pre_test =  ipi_pre_test, .threshold = 100000 },
 //	{ ipi_halt, "ipi+halt", is_smp, .parallel = 0, },
 //	{ ple_round_robin, "ple-round-robin", .parallel = 1 },
 //	{ wr_tsc_adjust_msr, "wr_tsc_adjust_msr", .parallel = 1 },
@@ -390,12 +391,16 @@ static void delay(int count)
 	while(count--) asm("");
 }
 
+#define ITER 10000
 static bool do_test(struct test *test)
 {
 	unsigned long i, iterations;
 	unsigned long sample, cycles;
 	unsigned long t1, t2;
 	unsigned long long min = 0, max = 0;
+	unsigned long tmp_result[ITER];
+	unsigned long bad_result[ITER];
+	int bad_result_idx = 0;
 
 	if (cpu_count() == 1 && !test->parallel) {
 		printf("%s requires smp, skip it..\n", test->name);
@@ -405,7 +410,7 @@ static bool do_test(struct test *test)
 	if (test->pre_test)
 		test->pre_test();
 
-	iterations = 100000;
+	iterations = ITER;
 	cycles = 0;
 	for (i = 0; i < iterations; i++) {
 		t1 = start();
@@ -414,11 +419,14 @@ static bool do_test(struct test *test)
 		/* Wait some cycles until the dest is completely done for IPI */
 		delay(TEST_DELAY);
 		sample = t2 - t1;
-		if (sample == 0) {
+		if (sample == 0 || sample > test->threshold) {
 			/* If something went wrong or we had an
 			 * overflow, don't count that sample */
 			iterations--;
 			i--;
+
+			bad_result[bad_result_idx] = sample;
+			bad_result_idx++;
 			//debug("cycle count overflow: %d\n", sample);
 			continue;
 		}
@@ -427,10 +435,15 @@ static bool do_test(struct test *test)
 			min = sample;
 		if (max < sample)
 			max = sample;
+		tmp_result[i] = sample;
 	}
 
 	if (test->post_test)
 		test->post_test();
+
+	for (i = 0; i < bad_result_idx; i++)
+		printf("Result %ld cycles is not included\n", bad_result[i]);
+	printf("%d out of %d is excluded\n", bad_result_idx, ITER);
 
 	printf("%s:\t avg %lu\t min %llu\t max %llu\n",
 		test->name, cycles / iterations, min, max);
