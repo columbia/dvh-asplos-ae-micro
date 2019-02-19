@@ -9,6 +9,8 @@ L1_QEMU=/root/vm/qemu/x86_64-softmmu/qemu-system-x86_64
 uname -n | grep -q cloudlab
 err=$?
 
+TESTS="ipi ipi-nowait ipi-dest-running"
+
 if [[ $err == 0 ]]; then
 	MY_QEMU=$L0_QEMU
 else
@@ -20,7 +22,7 @@ do
 	if [ i != 0 ]; then
 		APPEND="-a"
 	fi
-	QEMU=$MY_QEMU ./x86-run x86/vmexit.flat | tee $APPEND result
+	QEMU=$MY_QEMU ./x86-run x86/vmexit.flat --append "$TESTS" | tee $APPEND result
 done
 
 echo "ipi avg"
