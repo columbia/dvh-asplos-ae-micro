@@ -27,6 +27,7 @@
 #include "desc.h"
 #include "isr.h"
 #include "msr.h"
+#include "measure.h"
 
 static void test_lapic_existence(void)
 {
@@ -54,19 +55,17 @@ int breakmax = 0;
 static void tsc_deadline_timer_isr(isr_regs_t *regs)
 {
     u64 now = rdtsc();
-    ++tdt_count;
-
-    if (table_idx < TABLE_SIZE && tdt_count > 1)
-        table[table_idx++] = now - exptime;
-
-    if (breakmax && tdt_count > 1 && (now - exptime) > breakmax) {
-        hitmax = 1;
-        apic_write(APIC_EOI, 0);
-        return;
-    }
+    unsigned long t1, t2;
 
     exptime = now+delta;
+
+    t1 = start();
     wrmsr(MSR_IA32_TSCDEADLINE, now+delta);
+    t2 = stop();
+
+    if (table_idx < TABLE_SIZE)
+        table[table_idx++] = t2 - t1;
+
     apic_write(APIC_EOI, 0);
 }
 
@@ -106,6 +105,7 @@ static void test_tsc_deadline_timer(void)
 int main(int argc, char **argv)
 {
     int i, size;
+    unsigned long sum = 0, min = 0, max = 0;
 
     setup_vm();
     smp_init();
@@ -130,7 +130,16 @@ int main(int argc, char **argv)
         if (hitmax && i == table_idx-1)
             printf("hit max: %d < ", breakmax);
         printf("latency: %" PRId64 "\n", table[i]);
+	sum += table[i];
+
+	if (min == 0 || min > table[i])
+		min = table[i];
+	if (max < table[i])
+		max = table[i];
     }
+
+    printf("tsc_deadline_write:\t avg %lu\t min %lu\t max %lu\n",
+	   sum / TABLE_SIZE, min, max);
 
     return report_summary();
 }
