@@ -348,28 +348,28 @@ static bool pci_io_next(struct test *test)
 
 #define THRESHOLD 100000
 static struct test tests[] = {
-//	{ cpuid_test, "cpuid", .parallel = 1,  },
+	{ cpuid_test, "cpuid", .parallel = 1,  },
 	{ vmcall, "vmcall", .parallel = 1, },
 #ifdef __x86_64__
-//	{ mov_from_cr8, "mov_from_cr8", .parallel = 1, },
-//	{ mov_to_cr8, "mov_to_cr8" , .parallel = 1, },
+	{ mov_from_cr8, "mov_from_cr8", .parallel = 1, },
+	{ mov_to_cr8, "mov_to_cr8" , .parallel = 1, },
 #endif
-//	{ inl_pmtimer, "inl_from_pmtimer", .parallel = 1, },
-//	{ inl_nop_qemu, "inl_from_qemu", .parallel = 1 },
-//	{ inl_nop_kernel, "inl_from_kernel", .parallel = 1 },
-//	{ outl_elcr_kernel, "outl_to_kernel", .parallel = 1 },
-//	{ mov_dr, "mov_dr", .parallel = 1 },
+	{ inl_pmtimer, "inl_from_pmtimer", .parallel = 1, },
+	{ inl_nop_qemu, "inl_from_qemu", .parallel = 1 },
+	{ inl_nop_kernel, "inl_from_kernel", .parallel = 1 },
+	{ outl_elcr_kernel, "outl_to_kernel", .parallel = 1 },
+	{ mov_dr, "mov_dr", .parallel = 1 },
 	{ ipi, "ipi", is_smp, .parallel = 0,  .threshold = THRESHOLD },
 	{ ipi_nowait, "ipi-nowait", is_smp, .parallel = 0, .post_test = ipi_nowait_post_test,
  	.threshold = THRESHOLD},
 	{ ipi, "ipi-dest-running", is_smp, .parallel = 0,
 	  .post_test = ipi_post_test, .pre_test =  ipi_pre_test, .threshold = THRESHOLD },
-//	{ ipi_halt, "ipi+halt", is_smp, .parallel = 0, },
-//	{ ple_round_robin, "ple-round-robin", .parallel = 1 },
-//	{ wr_tsc_adjust_msr, "wr_tsc_adjust_msr", .parallel = 1 },
-//	{ rd_tsc_adjust_msr, "rd_tsc_adjust_msr", .parallel = 1 },
-	//{ NULL, "pci-mem", .parallel = 0, .next = pci_mem_next },
-	//{ NULL, "pci-io", .parallel = 0, .next = pci_io_next },
+	{ ipi_halt, "ipi+halt", is_smp, .parallel = 0, },
+	{ ple_round_robin, "ple-round-robin", .parallel = 1 },
+	{ wr_tsc_adjust_msr, "wr_tsc_adjust_msr", .parallel = 1 },
+	{ rd_tsc_adjust_msr, "rd_tsc_adjust_msr", .parallel = 1 },
+	{ NULL, "pci-mem", .parallel = 0, .next = pci_mem_next },
+	{ NULL, "pci-io", .parallel = 0, .next = pci_io_next },
 };
 
 unsigned iterations;
