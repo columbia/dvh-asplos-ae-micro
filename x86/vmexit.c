@@ -349,7 +349,7 @@ static bool pci_io_next(struct test *test)
 #define THRESHOLD 100000
 static struct test tests[] = {
 	{ cpuid_test, "cpuid", .parallel = 1,  },
-	{ vmcall, "vmcall", .parallel = 1, },
+	{ vmcall, "vmcall", .parallel = 1, .threshold = THRESHOLD },
 #ifdef __x86_64__
 	{ mov_from_cr8, "mov_from_cr8", .parallel = 1, },
 	{ mov_to_cr8, "mov_to_cr8" , .parallel = 1, },
