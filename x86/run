@@ -43,7 +43,7 @@ else
 fi
 
 #command="${qemu} -enable-kvm $pc_testdev -vnc none -serial stdio $pci_testdev $hyperv_testde -kernel"
-command="${qemu} -enable-kvm $pc_testdev -vnc none -serial stdio $pci_testdev $hyperv_testde -smp 2 -qmp unix:/var/run/qmp,server,wait -kernel"
+command="${qemu} -machine q35,accel=kvm -cpu host  $pc_testdev -vnc none -serial stdio $pci_testdev $hyperv_testde -smp 2 -qmp unix:/var/run/qmp,server,wait -kernel"
 command="$(timeout_cmd) $command"
 echo ${command} "$@"
 
