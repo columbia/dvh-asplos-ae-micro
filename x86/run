@@ -42,8 +42,15 @@ else
 	pc_testdev="-device testdev,chardev=testlog -chardev file,id=testlog,path=msr.out"
 fi
 
+read -p "Want to run on SMP[y/N]?" SMP
+if [ "$SMP" == "y" ]; then
+	SMP="-smp 2 -qmp unix:/var/run/qmp,server,wait"
+else
+	SMP=""
+fi
+
 #command="${qemu} -enable-kvm $pc_testdev -vnc none -serial stdio $pci_testdev $hyperv_testde -kernel"
-command="${qemu} -machine q35,accel=kvm -cpu host  $pc_testdev -vnc none -serial stdio $pci_testdev $hyperv_testde -smp 2 -qmp unix:/var/run/qmp,server,wait -kernel"
+command="${qemu} -machine q35,accel=kvm -cpu host  $pc_testdev -vnc none -serial stdio $pci_testdev $hyperv_testde $SMP -kernel"
 command="$(timeout_cmd) $command"
 echo ${command} "$@"
 
