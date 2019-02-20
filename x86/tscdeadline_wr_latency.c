@@ -129,7 +129,7 @@ int main(int argc, char **argv)
     for (i = 0; i < table_idx; i++) {
         if (hitmax && i == table_idx-1)
             printf("hit max: %d < ", breakmax);
-        printf("latency: %" PRId64 "\n", table[i]);
+        //printf("latency: %" PRId64 "\n", table[i]);
 	sum += table[i];
 
 	if (min == 0 || min > table[i])
