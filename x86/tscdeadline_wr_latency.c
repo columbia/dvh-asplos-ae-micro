@@ -59,12 +59,12 @@ static void tsc_deadline_timer_isr(isr_regs_t *regs)
 
     exptime = now+delta;
 
-    t1 = start();
-    wrmsr(MSR_IA32_TSCDEADLINE, now+delta);
-    t2 = stop();
-
-    if (table_idx < TABLE_SIZE)
+    if (table_idx < TABLE_SIZE) {
+        t1 = start();
+        wrmsr(MSR_IA32_TSCDEADLINE, now+delta);
+        t2 = stop();
         table[table_idx++] = t2 - t1;
+    }
 
     apic_write(APIC_EOI, 0);
 }
