@@ -17,6 +17,8 @@ else
 	MY_QEMU=$L1_QEMU
 fi
 
+#Run this command for timer measure
+#./x86-run x86/tscdeadline_wr_latency.flat
 for i in `seq 0 9`;
 do
 	if [ i != 0 ]; then
