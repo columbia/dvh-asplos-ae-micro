@@ -5,6 +5,15 @@
 typedef unsigned long long ticks;
 
 static __inline__ ticks start (void) {
+	return rdtsc();
+}
+
+static __inline__ ticks stop (void) {
+	return rdtsc();
+}
+
+/*
+static __inline__ ticks start (void) {
   unsigned cycles_low, cycles_high;
   asm volatile ("CPUID\n\t"
 		"RDTSC\n\t"
@@ -24,3 +33,4 @@ static __inline__ ticks stop (void) {
 		     "%rax", "%rdx");
 	return ((ticks)cycles_high << 32) | cycles_low;
 }
+*/
