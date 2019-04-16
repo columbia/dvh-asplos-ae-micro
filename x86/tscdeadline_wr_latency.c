@@ -58,6 +58,7 @@ u64 table[TABLE_SIZE];
 volatile int table_idx;
 volatile int hitmax = 0;
 int breakmax = 0;
+int size;
 
 static void tsc_deadline_timer_isr(isr_regs_t *regs)
 {
@@ -66,7 +67,7 @@ static void tsc_deadline_timer_isr(isr_regs_t *regs)
 
     exptime = now+delta;
 
-    if (table_idx < TABLE_SIZE) {
+    if (table_idx < size) {
         t1 = start();
         wrmsr(MSR_IA32_TSCDEADLINE, now+delta);
         t2 = stop();
@@ -111,7 +112,7 @@ static void test_tsc_deadline_timer(void)
 
 int main(int argc, char **argv)
 {
-    int i, size;
+    int i;
     unsigned long sum = 0, min = 0, max = 0;
 
     setup_vm();
@@ -146,7 +147,7 @@ int main(int argc, char **argv)
     }
 
     printf("tsc_deadline_write:\t avg %lu\t min %lu\t max %lu\n",
-	   sum / TABLE_SIZE, min, max);
+	   sum / table_idx, min, max);
 
     return report_summary();
 }
