@@ -29,6 +29,13 @@
 #include "msr.h"
 #include "measure.h"
 
+static void vmcall(unsigned long a)
+{
+	unsigned long b, c, d;
+
+	asm volatile ("vmcall" : "+a"(a), "=b"(b), "=c"(c), "=d"(d));
+}
+
 static void test_lapic_existence(void)
 {
     u32 lvr;
