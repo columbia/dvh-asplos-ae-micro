@@ -27,18 +27,12 @@ do
 	QEMU=$MY_QEMU ./x86-run x86/vmexit.flat --append "$EXIT_TESTS" | tee $APPEND result
 done
 
-echo "ipi avg"
-grep ipi: result | awk '{ print $3 }'
-echo "ipi min"
-grep ipi: result | awk '{ print $5 }'
+LIST=( $EXIT_TESTS )
+for i in "${LIST[@]}"
+do 
+	echo $i "avg"
+	grep $i: result | awk '{ print $3 }'
 
-echo "ipi-nowait avg"
-grep ipi-nowait: result | awk '{ print $3 }'
-echo "ipi-nowait min"
-grep ipi-nowait: result | awk '{ print $5 }'
-
-TEST=ipi-dest
-echo "$TEST avg"
-grep $TEST result | awk '{ print $3 }'
-echo "$TEST min"
-grep $TEST result | awk '{ print $5 }'
+	echo $i "min"
+	grep $i: result | awk '{ print $5 }'
+done
