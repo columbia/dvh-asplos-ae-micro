@@ -221,3 +221,10 @@ void *alloc_vpage(void)
 {
     return alloc_vpages(1);
 }
+
+void vmcall0(unsigned int a)
+{
+	unsigned long b, c, d;
+
+	asm volatile ("vmcall" : "+a"(a), "=b"(b), "=c"(c), "=d"(d));
+}

@@ -28,4 +28,5 @@ unsigned long *install_large_page(unsigned long *cr3,unsigned long phys,
                                   void *virt);
 unsigned long *install_page(unsigned long *cr3, unsigned long phys, void *virt);
 
+void vmcall0(unsigned int a);
 #endif
