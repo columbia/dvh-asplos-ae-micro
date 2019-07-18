@@ -123,7 +123,8 @@ int main(int argc, char **argv)
 
     mask_pic_interrupts();
 
-    delta = argc <= 1 ? 200000 : atol(argv[1]);
+    /* arg1 is interval in ms */
+    delta = argc <= 1 ? 200000 : atol(argv[1])*2200000;
     size = argc <= 2 ? TABLE_SIZE : atol(argv[2]);
     breakmax = argc <= 3 ? 0 : atol(argv[3]);
     printf("breakmax=%d\n", breakmax);

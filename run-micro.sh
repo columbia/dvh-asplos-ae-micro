@@ -20,7 +20,7 @@ fi
 #Run this command for timer measure
 #./x86-run x86/tscdeadline_wr_latency.flat
 # This is for 100ms, 100 iterations
-#./x86-run x86/tscdeadline_wr_latency.flat --append "220000000 100"
+#./x86-run x86/tscdeadline_wr_latency.flat --append "100 100"
 #QEMU=/root/vm/qemu-pi/x86_64-softmmu/qemu-system-x86_64
 for i in `seq 0 9`;
 do
