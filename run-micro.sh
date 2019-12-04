@@ -33,9 +33,6 @@ done
 LIST=( $EXIT_TESTS )
 for i in "${LIST[@]}"
 do 
-	echo $i "avg"
-	grep $i: result | awk '{ print $3 }'
-
 	echo $i "min"
 	grep $i: result | awk '{ print $5 }'
 done
