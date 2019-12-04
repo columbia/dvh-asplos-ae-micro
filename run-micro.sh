@@ -2,14 +2,14 @@
 rm -f result
 APPEND=''
 
-L0_QEMU=/srv/vm/qemu/x86_64-softmmu/qemu-system-x86_64
-L1_QEMU=/root/vm/qemu/x86_64-softmmu/qemu-system-x86_64
+L0_QEMU=/root/dvh-asplos-ae/qemu/x86_64-softmmu/qemu-system-x86_64
+L1_QEMU=/root/dvh-asplos-ae/qemu/x86_64-softmmu/qemu-system-x86_64
 
 #Check if we are on a bare-metal machine
 uname -n | grep -q cloudlab
 err=$?
 
-EXIT_TESTS="vmcall ipi ipi-nowait ipi-dest-running"
+EXIT_TESTS="vmcall ipi"
 
 if [[ $err == 0 ]]; then
 	MY_QEMU=$L0_QEMU
